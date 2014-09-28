@@ -26,21 +26,16 @@ public class Board : MonoBehaviour {
 	public GameObject[] Blocks;
 	// game board sprite
 	private SpriteRenderer boardSprite;
+	// tag of selected block. 
+	private int selectedBlockTag;
 
 	private void initBoard() {
-		Debug.Log("it is called");
 		SpriteRenderer sprite = GetComponent<SpriteRenderer> ();
 		boardWidth = sprite.bounds.size.x;
 		boardHeight = sprite.bounds.size.y;
 
 		cellWidth = boardWidth / BOARD_SIZE_X;
 		cellHeight = boardHeight / BOARD_SIZE_Y;
-
-		Debug.Log (string.Format("boardWidth = {0}", boardWidth));
-		Debug.Log (string.Format("boardHeight = {0}", boardHeight));
-
-		Debug.Log (string.Format("cellWidth = {0}", cellWidth));
-		Debug.Log (string.Format("cellHeight = {0}", cellHeight));
 
 		this.boardSprite = sprite;
 		PutBlock ();
@@ -60,14 +55,52 @@ public class Board : MonoBehaviour {
 	void OnGUI ()
 	{
 		if (Event.current.type == EventType.MouseDown) {
-			Debug.Log(Camera.main.ScreenToWorldPoint(Event.current.mousePosition));
+			Vector2 touchPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+			computeSelectedBlockTag(touchPoint);
+		}
+
+		if (Event.current.type == EventType.MouseDrag) {
+				
 		}
 	}
+	/// <summary>
+	/// Computes the selected block tag.
+	/// </summary>
+	/// <param name="touchPoint">Touch point.</param>
+	void computeSelectedBlockTag(Vector2 touchPoint) {
+		Vector2 min = boardSprite.bounds.min;
+		Vector2 max = boardSprite.bounds.max;
 
+		Debug.Log (string.Format ("touchPoint = {0} ", touchPoint));
+
+		//Debug.Log (string.Format ("min = {0} ", min));
+		//Debug.Log (string.Format ("max = {0} ", max));
+
+		if (min.x > touchPoint.x || max.x < touchPoint.x) {
+			Debug.Log("x exceeded");
+			return;
+		}
+
+		if (min.y > touchPoint.y || max.y < touchPoint.y) {
+			Debug.Log("exceeded");
+			return;
+		}
+
+		int xIndex = (int)((touchPoint.x - min.x) / cellWidth) + 1;
+		int yIndex = (int)((touchPoint.y - min.y) / cellHeight) + 1;
+
+		Debug.Log(string.Format("xIndex = {0}, yIndex = {0}", xIndex, yIndex));
+	}
+
+/// <summary>
+/// Gets the random block. and ensure that there is not same block in below and left side of this block located in (x,y).
+/// </summary>
+/// <returns>The random block.</returns>
+/// <param name="x">The x coordinate.</param>
+/// <param name="y">The y coordinate.</param>
 	private GameObject GetRandomBlock(int x, int y) {
 		GameObject newBlock;
 		while (true) {
-			bool b = false;
 			newBlock = Blocks [Random.Range (0, Blocks.Length)];
 			if (x == 1 && y == 1) {
 				return newBlock;
@@ -77,11 +110,7 @@ public class Board : MonoBehaviour {
 				GameObject leftBlock = tagBlockDictionry[getTag(x - 1, y)];
 				if (newBlock.name == leftBlock.name) {
 					continue;
-				} else {
-					b =  true;
 				}
-			} else {
-				b = true;
 			}
 
 			if (y > 1) {
@@ -106,7 +135,6 @@ public class Board : MonoBehaviour {
 		float xx = cellWidth * x - cellWidth / 2;
 		float yy = cellHeight * y - cellHeight / 2;
 
-		Vector2 max = boardSprite.bounds.max;
 		Vector2 min = boardSprite.bounds.min;
 
 		return new Vector2 (min.x + xx , min.y + yy);
@@ -119,9 +147,5 @@ public class Board : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-		for (int i = 0; i < Input.touchCount; i++) {
-			Touch touch = Input.GetTouch(i);
-			Debug.Log(string.Format("touchPoint = {0}", touch.position));
-		}
 	}
 }
