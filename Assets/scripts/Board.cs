@@ -29,6 +29,11 @@ public class Board : MonoBehaviour {
 	// tag of selected block. 
 	private int selectedBlockTag;
 
+	// default layer sorting order
+	private const int DEFAULT_LAYER_SORTING_ORDER = 5;
+
+	public Bezier bezier;
+
 	private void initBoard() {
 		SpriteRenderer sprite = GetComponent<SpriteRenderer> ();
 		boardWidth = sprite.bounds.size.x;
@@ -36,6 +41,9 @@ public class Board : MonoBehaviour {
 
 		cellWidth = boardWidth / BOARD_SIZE_X;
 		cellHeight = boardHeight / BOARD_SIZE_Y;
+
+		//Debug.Log (string.Format ("cellWidth = {0} ", cellWidth));
+		//Debug.Log (string.Format ("cellHeight = {0} ", cellHeight));
 
 		this.boardSprite = sprite;
 		PutBlock ();
@@ -45,9 +53,9 @@ public class Board : MonoBehaviour {
 		tagBlockDictionry = new Dictionary<int, GameObject> ();
 		for (int x = 1; x <= BOARD_SIZE_X; x++) {
 			for (int y = 1; y <= BOARD_SIZE_Y; y++) {
-				GameObject block = GetRandomBlock(x, y);
-				tagBlockDictionry.Add(getTag(x, y), block);
-				Instantiate(block, GetBlockPosition(x, y), transform.rotation);
+				GameObject blockInstance = (GameObject)Instantiate(GetRandomBlock(x, y), GetBlockPosition(x, y), transform.rotation);
+				blockInstance.renderer.sortingOrder = DEFAULT_LAYER_SORTING_ORDER;
+				tagBlockDictionry.Add(getTag(x, y), blockInstance);
 			}		
 		}
 	}
@@ -56,41 +64,137 @@ public class Board : MonoBehaviour {
 	{
 		if (Event.current.type == EventType.MouseDown) {
 			Vector2 touchPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-			computeSelectedBlockTag(touchPoint);
-		}
+			if (computeSelectedBlockTag(touchPoint)){
+				boostBlock(touchPoint);
+			}
+		} 
 
 		if (Event.current.type == EventType.MouseDrag) {
-				
+			Vector2 touchPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+			//Debug.Log(string.Format("drag point = {0}", touchPoint));
+			GameObject tapBlock = tagBlockDictionry [selectedBlockTag];
+			tapBlock.renderer.sortingOrder = DEFAULT_LAYER_SORTING_ORDER + 1;
+			tapBlock.transform.position = touchPoint;
+			exchangeComa(touchPoint);
+		}
+
+		if (Event.current.type == EventType.MouseUp) {
+			//Debug.Log("mouse up");
+			BlockMoveEnd();
 		}
 	}
+
+	/// <summary>
+	/// process at the end of block moving.
+	/// </summary>
+	void BlockMoveEnd() {
+		GameObject tapBlock = tagBlockDictionry [selectedBlockTag];
+		tapBlock.renderer .sortingOrder = DEFAULT_LAYER_SORTING_ORDER;
+		selectedBlockTag = -1;
+		resetBlockPosition();
+	}
+
+	/// <summary>
+	/// Resets the all block position to right position.
+	/// </summary>
+	void resetBlockPosition() {
+		for (int x = 1; x <= BOARD_SIZE_X; x++) {
+			for (int y = 1; y <= BOARD_SIZE_Y; y++) {
+				GameObject block = tagBlockDictionry[getTag(x, y)];
+				block.transform.position = GetBlockPosition(x, y);
+			}		
+		}
+	}
+
+	/// <summary>
+	/// Exchanges the coma.
+	/// </summary>
+	/// <param name="touchPoint">Touch point.</param>
+	void exchangeComa(Vector2 touchPoint) {
+		int passedBlockTag = getPassedBlockTag (touchPoint);
+		if (selectedBlockTag == passedBlockTag) {
+			return;		
+		}
+
+		// move along the block bezier curve. 
+		lasjkdfl;ajksdflkas   bezier = new Bezier ();
+
+		GameObject selectedBlock = tagBlockDictionry [selectedBlockTag];
+
+		tagBlockDictionry [selectedBlockTag] = tagBlockDictionry [passedBlockTag];
+		tagBlockDictionry [passedBlockTag] = selectedBlock;
+
+		PositionIndex passedBlockPositionIndex = GetPositionIndexFromTag (selectedBlockTag);
+		tagBlockDictionry [selectedBlockTag].transform.position = GetBlockPosition (passedBlockPositionIndex.xx, passedBlockPositionIndex.yy);
+		selectedBlockTag = passedBlockTag;
+	}
+
+	PositionIndex GetPositionIndexFromTag(int tag) {
+		int x = (tag - BASE_TAG) / 10;
+		int y = (tag - BASE_TAG) % 10;
+
+		PositionIndex positionIndex = new PositionIndex ();
+		positionIndex.xx = x;
+		positionIndex.yy = y;
+		return positionIndex;
+	}
+
+	/// <summary>
+	/// change block position. set the tap point to be bottom of the block.
+	/// </summary>
+	void boostBlock(Vector2 tapPoint) {
+		GameObject tapBlock = tagBlockDictionry [selectedBlockTag];
+		tapBlock.transform.position = tapPoint;
+	}
+
 	/// <summary>
 	/// Computes the selected block tag.
 	/// </summary>
 	/// <param name="touchPoint">Touch point.</param>
-	void computeSelectedBlockTag(Vector2 touchPoint) {
+	bool computeSelectedBlockTag(Vector2 touchPoint) {
 		Vector2 min = boardSprite.bounds.min;
 		Vector2 max = boardSprite.bounds.max;
 
-		Debug.Log (string.Format ("touchPoint = {0} ", touchPoint));
-
-		//Debug.Log (string.Format ("min = {0} ", min));
-		//Debug.Log (string.Format ("max = {0} ", max));
-
 		if (min.x > touchPoint.x || max.x < touchPoint.x) {
 			Debug.Log("x exceeded");
-			return;
+			return false; 
 		}
 
 		if (min.y > touchPoint.y || max.y < touchPoint.y) {
 			Debug.Log("exceeded");
-			return;
+			return false;
 		}
 
 		int xIndex = (int)((touchPoint.x - min.x) / cellWidth) + 1;
 		int yIndex = (int)((touchPoint.y - min.y) / cellHeight) + 1;
 
-		Debug.Log(string.Format("xIndex = {0}, yIndex = {0}", xIndex, yIndex));
+		selectedBlockTag = getTag (xIndex, yIndex);
+		return true;
 	}
+
+	int getPassedBlockTag(Vector2 touchPoint) {
+		Vector2 min = boardSprite.bounds.min;
+		Vector2 max = boardSprite.bounds.max;
+
+		int xIndex = (int)((touchPoint.x - min.x) / cellWidth) + 1;
+		int yIndex = (int)((touchPoint.y - min.y) / cellHeight) + 1;
+
+		if (min.y > touchPoint.y) {
+			yIndex = 1;		
+		}
+
+		if (max.y < touchPoint.y) {
+			yIndex = BOARD_SIZE_Y;		
+		}
+
+		if (min.x > touchPoint.x || max.x < touchPoint.x) {
+			BlockMoveEnd();		
+		}
+
+		return getTag (xIndex, yIndex);
+	}
+
+
 
 /// <summary>
 /// Gets the random block. and ensure that there is not same block in below and left side of this block located in (x,y).
