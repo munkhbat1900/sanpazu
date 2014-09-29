@@ -3,11 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 
 public class Board : MonoBehaviour {
-
-	// board size at the X-axis
-	private int BOARD_SIZE_X = 7;
-	// board size at the Y-axis
-	private int BOARD_SIZE_Y = 5;
 	// block prefab
 	private GameObject blocks;
 	// cell width
@@ -15,13 +10,11 @@ public class Board : MonoBehaviour {
 	// cell height
 	private float cellHeight;
 	// board width
-	private float boardWidth;
+	private float boardWidth; 
 	// board height
 	private float boardHeight;
 	// location and block dictionary
 	private Dictionary<int, GameObject> tagBlockDictionry;
-	// base tag
-	private const int BASE_TAG = 10000;
 	// coma array.  
 	public GameObject[] Blocks;
 	// game board sprite
@@ -32,15 +25,13 @@ public class Board : MonoBehaviour {
 	// default layer sorting order
 	private const int DEFAULT_LAYER_SORTING_ORDER = 5;
 
-	public Bezier bezier;
-
 	private void initBoard() {
 		SpriteRenderer sprite = GetComponent<SpriteRenderer> ();
 		boardWidth = sprite.bounds.size.x;
 		boardHeight = sprite.bounds.size.y;
 
-		cellWidth = boardWidth / BOARD_SIZE_X;
-		cellHeight = boardHeight / BOARD_SIZE_Y;
+		cellWidth = boardWidth / Consts.BOARD_SIZE_X;
+		cellHeight = boardHeight / Consts.BOARD_SIZE_Y;
 
 		//Debug.Log (string.Format ("cellWidth = {0} ", cellWidth));
 		//Debug.Log (string.Format ("cellHeight = {0} ", cellHeight));
@@ -51,8 +42,8 @@ public class Board : MonoBehaviour {
 
 	private void PutBlock () {
 		tagBlockDictionry = new Dictionary<int, GameObject> ();
-		for (int x = 1; x <= BOARD_SIZE_X; x++) {
-			for (int y = 1; y <= BOARD_SIZE_Y; y++) {
+		for (int x = 1; x <= Consts.BOARD_SIZE_X; x++) {
+			for (int y = 1; y <= Consts.BOARD_SIZE_Y; y++) {
 				GameObject blockInstance = (GameObject)Instantiate(GetRandomBlock(x, y), GetBlockPosition(x, y), transform.rotation);
 				blockInstance.renderer.sortingOrder = DEFAULT_LAYER_SORTING_ORDER;
 				tagBlockDictionry.Add(getTag(x, y), blockInstance);
@@ -98,8 +89,8 @@ public class Board : MonoBehaviour {
 	/// Resets the all block position to right position.
 	/// </summary>
 	void resetBlockPosition() {
-		for (int x = 1; x <= BOARD_SIZE_X; x++) {
-			for (int y = 1; y <= BOARD_SIZE_Y; y++) {
+		for (int x = 1; x <= Consts.BOARD_SIZE_X; x++) {
+			for (int y = 1; y <= Consts.BOARD_SIZE_Y; y++) {
 				GameObject block = tagBlockDictionry[getTag(x, y)];
 				block.transform.position = GetBlockPosition(x, y);
 			}		
@@ -116,8 +107,6 @@ public class Board : MonoBehaviour {
 			return;		
 		}
 
-		// move along the block bezier curve. 
-		lasjkdfl;ajksdflkas   bezier = new Bezier ();
 
 		GameObject selectedBlock = tagBlockDictionry [selectedBlockTag];
 
@@ -127,11 +116,38 @@ public class Board : MonoBehaviour {
 		PositionIndex passedBlockPositionIndex = GetPositionIndexFromTag (selectedBlockTag);
 		tagBlockDictionry [selectedBlockTag].transform.position = GetBlockPosition (passedBlockPositionIndex.xx, passedBlockPositionIndex.yy);
 		selectedBlockTag = passedBlockTag;
+		//InitBezierAnimation (passedBlockTag);
+	}
+
+	void InitBezierAnimation(int passedBlockTag) {
+		// move along the block bezier curve. 
+//		PositionIndex passedPositionIndex = GetPositionIndexFromTag (passedBlockTag);
+//		Vector2 startPoint = GetBlockPosition (passedPositionIndex.xx, passedPositionIndex.yy);
+//		PositionIndex selectedBlockPositionIndex = GetPositionIndexFromTag (selectedBlockTag);
+//		Vector2 endPoint = GetBlockPosition (selectedBlockPositionIndex.xx, selectedBlockPositionIndex.yy);
+//
+//		Vector2 controlPoint1;
+//		Vector2 controlPoint2;
+//		if (passedPositionIndex.xx != selectedBlockPositionIndex.xx) {
+//			// movement along x-axis
+//			controlPoint1 = new Vector2(endPoint.x, endPoint.y - cellHeight / 2);
+//			controlPoint2 = new Vector2(startPoint.x, startPoint.y - cellHeight / 2);
+//		} else {
+//			// movement along y-axis
+//			controlPoint1 = new Vector2(endPoint.x + cellWidth / 2, endPoint.y);
+//			controlPoint2 = new Vector2(startPoint.x + cellWidth / 2, startPoint.y);
+//		}
+
+		//bezier = new Bezier (startPoint, controlPoint1, endPoint, controlPoint2);
+		 //bezier = new Bezier (controlPoint1, startPoint, controlPoint2, endPoint);
+		//bezier = new Bezier (endPoint, controlPoint2, startPoint, controlPoint1);
+		//bezier = new Bezier (controlPoint2, endPoint, controlPoint1, startPoint);
+		//isBlockMoving = true;
 	}
 
 	PositionIndex GetPositionIndexFromTag(int tag) {
-		int x = (tag - BASE_TAG) / 10;
-		int y = (tag - BASE_TAG) % 10;
+		int x = (tag - Consts.BASE_TAG) / 10;
+		int y = (tag - Consts.BASE_TAG) % 10;
 
 		PositionIndex positionIndex = new PositionIndex ();
 		positionIndex.xx = x;
@@ -184,7 +200,7 @@ public class Board : MonoBehaviour {
 		}
 
 		if (max.y < touchPoint.y) {
-			yIndex = BOARD_SIZE_Y;		
+			yIndex = Consts.BOARD_SIZE_Y;		
 		}
 
 		if (min.x > touchPoint.x || max.x < touchPoint.x) {
@@ -232,7 +248,7 @@ public class Board : MonoBehaviour {
 	}
 
 	private int getTag(int x, int y) {
-		return BASE_TAG + 10 * x + y;
+		return Consts.BASE_TAG + 10 * x + y;
 	}
 
 	private Vector2 GetBlockPosition(int x, int y) {
