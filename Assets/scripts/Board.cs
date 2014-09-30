@@ -8,13 +8,13 @@ public class Board : MonoBehaviour {
 	// cell width
 	private float cellWidth;
 	// cell height
-	private float cellHeight;
+	private float cellHeight; 
 	// board width
 	private float boardWidth; 
 	// board height
 	private float boardHeight;
 	// location and block dictionary
-	private Dictionary<int, GameObject> tagBlockDictionry;
+	private SortedDictionary<int, GameObject> tagBlockDictionry;
 	// coma array.  
 	public GameObject[] Blocks;
 	// game board sprite
@@ -25,6 +25,8 @@ public class Board : MonoBehaviour {
 	// default layer sorting order
 	private const int DEFAULT_LAYER_SORTING_ORDER = 5;
 
+	private PuzzleRule puzzleRule;
+
 	private void initBoard() {
 		SpriteRenderer sprite = GetComponent<SpriteRenderer> ();
 		boardWidth = sprite.bounds.size.x;
@@ -33,20 +35,18 @@ public class Board : MonoBehaviour {
 		cellWidth = boardWidth / Consts.BOARD_SIZE_X;
 		cellHeight = boardHeight / Consts.BOARD_SIZE_Y;
 
-		//Debug.Log (string.Format ("cellWidth = {0} ", cellWidth));
-		//Debug.Log (string.Format ("cellHeight = {0} ", cellHeight));
-
 		this.boardSprite = sprite;
+		puzzleRule = new PuzzleRule ();
 		PutBlock ();
 	}
 
 	private void PutBlock () {
-		tagBlockDictionry = new Dictionary<int, GameObject> ();
+		tagBlockDictionry = new SortedDictionary<int, GameObject> ();
 		for (int x = 1; x <= Consts.BOARD_SIZE_X; x++) {
 			for (int y = 1; y <= Consts.BOARD_SIZE_Y; y++) {
 				GameObject blockInstance = (GameObject)Instantiate(GetRandomBlock(x, y), GetBlockPosition(x, y), transform.rotation);
 				blockInstance.renderer.sortingOrder = DEFAULT_LAYER_SORTING_ORDER;
-				tagBlockDictionry.Add(getTag(x, y), blockInstance);
+				tagBlockDictionry.Add(Consts.GetTag(x, y), blockInstance);
 			}		
 		}
 	}
@@ -83,6 +83,188 @@ public class Board : MonoBehaviour {
 		tapBlock.renderer .sortingOrder = DEFAULT_LAYER_SORTING_ORDER;
 		selectedBlockTag = -1;
 		resetBlockPosition();
+		SortedDictionary<int, int> successBlockMap = puzzleRule.getSuccessBlock (tagBlockDictionry);
+
+		generateNewBlocks (successBlockMap);
+
+		StartCoroutine("removeBlocksAndGenerateNewBlocks", successBlockMap);
+	}
+
+	IEnumerator removeBlocksAndGenerateNewBlocks(SortedDictionary<int, int> successBlockMap) {
+		float shrinkAnimationTime = removeBlocksAnimation (successBlockMap);
+		yield return new WaitForSeconds (shrinkAnimationTime);
+		removeBlocks (successBlockMap);
+		float moveBlocksAnimationTime = moveBlockAnimation (successBlockMap);
+		StartCoroutine("moveBlocks", moveBlocksAnimationTime);
+	}
+
+	IEnumerator moveBlocks(float moveBlocksAnimationTime) {
+		yield return new WaitForSeconds (moveBlocksAnimationTime);
+	}
+
+	float removeBlocksAnimation(SortedDictionary<int, int> successBlockMap) {
+		float animationTime = 0f;
+		foreach (var pair in successBlockMap) {
+			GameObject block = tagBlockDictionry[pair.Key];
+			block.GetComponent<ShrinkAnimation>().IsShrinking = true;
+			animationTime = block.GetComponent<ShrinkAnimation>().shrinkTime;
+		}
+		return animationTime;
+	}
+
+	private void removeBlocks(SortedDictionary<int, int> successBlockMap) {
+		foreach (var pair in successBlockMap) {
+			Destroy(tagBlockDictionry[pair.Key]);
+			tagBlockDictionry.Remove(pair.Key);
+		}
+	}
+
+	private void generateNewBlocks(SortedDictionary<int, int> successBlockMap) {
+		int[] ycounter  = new int[Consts.BOARD_SIZE_X + 1];
+		
+		for (int i = 1; i <= Consts.BOARD_SIZE_X; i++) {
+			ycounter[i] = 0;
+		}
+
+		foreach (var pair in successBlockMap) {
+			PositionIndex positionIndex = Consts.GetPositionIndexFromTag(pair.Key);
+
+			// create new block.
+			int newBlockTag = Consts.GetTag(positionIndex.xx, ycounter[positionIndex.xx]);
+
+			GameObject blockInstance = (GameObject)Instantiate(createRandomNewObject(), GetBlockPosition(positionIndex.xx, ycounter[positionIndex.xx]), 
+			                                                   transform.rotation);
+			blockInstance.renderer.sortingOrder = DEFAULT_LAYER_SORTING_ORDER;
+			tagBlockDictionry.Add(newBlockTag, blockInstance);
+			ycounter[positionIndex.xx] = ycounter[positionIndex.xx] - 1;
+		}
+	}
+
+	private void searchNewPosition(SortedDictionary<int, int> successBlockMap) {
+		foreach (var pair in successBlockMap) {
+			PositionIndex positionIndex = Consts.GetPositionIndexFromTag(pair.Key);
+			int xIndex = positionIndex.xx;
+			int yIndex = positionIndex.yy;
+
+			foreach (var pair1 in tagBlockDictionry) {
+				PositionIndex posIndex = Consts.GetPositionIndexFromTag(pair1.Key);
+				if (xIndex == posIndex.xx && yIndex > posIndex.yy) {
+					setNewPosition(posIndex);
+				}
+			}
+		}
+	}
+
+	void setNewPosition(PositionIndex positionIndex) {
+		GameObject block = tagBlockDictionry [Consts.GetTag (positionIndex.xx, positionIndex.yy)];
+
+		int nextPosY = block.GetComponent<NextPosition> ().Y;
+		if (nextPosY == int.MaxValue) {
+			nextPosY = positionIndex.yy;
+		}
+		
+		nextPosY++;
+
+		//Debug.Log (string.Format ("type = {0} newPosX = {1} newPosY = {2}", block.name, positionIndex.xx, nextPosY));
+		
+		block.GetComponent<NextPosition> ().X = positionIndex.xx;
+		block.GetComponent<NextPosition> ().Y = nextPosY;
+	}
+
+	private float moveBlockAnimation(SortedDictionary<int, int> successBlockMap) {
+		searchNewPosition (successBlockMap);
+		List<int> keyList = new List<int>(tagBlockDictionry.Keys);
+		// key old tag. value new tag.
+		SortedDictionary<int, int> movedBlockDictionary = new SortedDictionary<int, int> ();
+		float animationTime = 0f;
+
+		SortedDictionary<int, GameObject> newTagBlockDictionary = new SortedDictionary<int, GameObject> ();
+
+		//Debug.Log (string.Format("length = {0}", keyList.Count));
+
+		foreach (var key in keyList) {
+			GameObject block = tagBlockDictionry[key];
+
+			int nextPosX = block.GetComponent<NextPosition>().X;
+			int nextPosY = block.GetComponent<NextPosition>().Y;
+
+			if (nextPosX != int.MaxValue && nextPosY != int.MaxValue) {
+				Vector2 newPosition = GetBlockPosition(nextPosX, nextPosY);
+				PositionIndex positionIndex = Consts.GetPositionIndexFromTag(key);
+				block.GetComponent<MoveBlockAnimation>().DestinationPoint = newPosition;
+				block.GetComponent<MoveBlockAnimation>().IsMoving = true;
+				animationTime = block.GetComponent<MoveBlockAnimation>().moveTime;
+
+				int newTag = Consts.GetTag(nextPosX, nextPosY);
+				movedBlockDictionary[key] = newTag;
+				if (newTagBlockDictionary.ContainsKey(newTag)) {
+					foreach (var pair in newTagBlockDictionary) {
+						Debug.Log (string.Format("tag = {0}, type = {1}", pair.Key, pair.Value.renderer.name));
+					}
+					Debug.Log (string.Format("duplicatetag = {0} block = {1}", newTag, block.renderer.name));
+					Debug.Log("haha");
+				}
+				newTagBlockDictionary.Add(newTag, block);
+			} else {
+				newTagBlockDictionary.Add(key, block);
+			}
+		}
+		tagBlockDictionry.Clear ();
+		tagBlockDictionry = newTagBlockDictionary;
+//		foreach (var pair in tagBlockDictionry) {
+//			Debug.Log (string.Format("tag = {0}, type = {1}", pair.Key, pair.Value.renderer.name));
+//		}
+		//updateTagBlockDictionary (movedBlockDictionary);
+		return animationTime;
+	}
+
+	/// <summary>
+	/// Updates the tag block dictionary after blocks move.
+	/// </summary>
+	/// <param name="movedBlockDictionary">Moved block dictionary.</param>
+	private void updateTagBlockDictionary(SortedDictionary<int, int> movedBlockDictionary) {
+		SortedDictionary<int, GameObject> newTagBlockDictionary = new SortedDictionary<int, GameObject> ();
+		List<int> keyList = new List<int>(tagBlockDictionry.Keys);
+		foreach (var tag in keyList) {
+			GameObject block = tagBlockDictionry[tag];
+			int nextX = block.GetComponent<NextPosition>().X;
+			int nextY = block.GetComponent<NextPosition>().Y;
+			if (nextX == int.MaxValue && nextY == int.MaxValue) {
+				newTagBlockDictionary.Add(tag, block);
+			} else {
+				newTagBlockDictionary.Add(Consts.GetTag(nextX, nextY), block);
+			}
+		}
+		tagBlockDictionry.Clear ();
+		tagBlockDictionry = newTagBlockDictionary;
+		foreach (var pair in tagBlockDictionry) {
+			Debug.Log (string.Format("tag = {0}, type = {1}", pair.Key, pair.Value.renderer.name));
+		}
+//		foreach (var tag in keyList) {
+//			bool found = false;
+//			int foundTag = 0;
+//			foreach (var pair in movedBlockDictionary) {
+//				if (tagBlockDictionry.ContainsKey(pair.Value)) {
+//					continue;
+//				}
+//				if (tagBlockDictionry.ContainsKey(pair.Key)) {
+//					found = true;
+//					foundTag = pair.Value;
+//				}
+//			}
+//			GameObject block = tagBlockDictionry[tag];
+//			if (found) {
+//				newTagBlockDictionary.Add(foundTag, block);
+//			} else {
+//				newTagBlockDictionary.Add(tag, block);
+//			}
+//		}
+//		tagBlockDictionry.Clear ();
+//		tagBlockDictionry = newTagBlockDictionary;
+	}
+
+	private GameObject createRandomNewObject() {
+		return Blocks [Random.Range (0, Blocks.Length)];
 	}
 
 	/// <summary>
@@ -91,7 +273,7 @@ public class Board : MonoBehaviour {
 	void resetBlockPosition() {
 		for (int x = 1; x <= Consts.BOARD_SIZE_X; x++) {
 			for (int y = 1; y <= Consts.BOARD_SIZE_Y; y++) {
-				GameObject block = tagBlockDictionry[getTag(x, y)];
+				GameObject block = tagBlockDictionry[Consts.GetTag(x, y)];
 				block.transform.position = GetBlockPosition(x, y);
 			}		
 		}
@@ -113,46 +295,9 @@ public class Board : MonoBehaviour {
 		tagBlockDictionry [selectedBlockTag] = tagBlockDictionry [passedBlockTag];
 		tagBlockDictionry [passedBlockTag] = selectedBlock;
 
-		PositionIndex passedBlockPositionIndex = GetPositionIndexFromTag (selectedBlockTag);
+		PositionIndex passedBlockPositionIndex = Consts.GetPositionIndexFromTag (selectedBlockTag);
 		tagBlockDictionry [selectedBlockTag].transform.position = GetBlockPosition (passedBlockPositionIndex.xx, passedBlockPositionIndex.yy);
 		selectedBlockTag = passedBlockTag;
-		//InitBezierAnimation (passedBlockTag);
-	}
-
-	void InitBezierAnimation(int passedBlockTag) {
-		// move along the block bezier curve. 
-//		PositionIndex passedPositionIndex = GetPositionIndexFromTag (passedBlockTag);
-//		Vector2 startPoint = GetBlockPosition (passedPositionIndex.xx, passedPositionIndex.yy);
-//		PositionIndex selectedBlockPositionIndex = GetPositionIndexFromTag (selectedBlockTag);
-//		Vector2 endPoint = GetBlockPosition (selectedBlockPositionIndex.xx, selectedBlockPositionIndex.yy);
-//
-//		Vector2 controlPoint1;
-//		Vector2 controlPoint2;
-//		if (passedPositionIndex.xx != selectedBlockPositionIndex.xx) {
-//			// movement along x-axis
-//			controlPoint1 = new Vector2(endPoint.x, endPoint.y - cellHeight / 2);
-//			controlPoint2 = new Vector2(startPoint.x, startPoint.y - cellHeight / 2);
-//		} else {
-//			// movement along y-axis
-//			controlPoint1 = new Vector2(endPoint.x + cellWidth / 2, endPoint.y);
-//			controlPoint2 = new Vector2(startPoint.x + cellWidth / 2, startPoint.y);
-//		}
-
-		//bezier = new Bezier (startPoint, controlPoint1, endPoint, controlPoint2);
-		 //bezier = new Bezier (controlPoint1, startPoint, controlPoint2, endPoint);
-		//bezier = new Bezier (endPoint, controlPoint2, startPoint, controlPoint1);
-		//bezier = new Bezier (controlPoint2, endPoint, controlPoint1, startPoint);
-		//isBlockMoving = true;
-	}
-
-	PositionIndex GetPositionIndexFromTag(int tag) {
-		int x = (tag - Consts.BASE_TAG) / 10;
-		int y = (tag - Consts.BASE_TAG) % 10;
-
-		PositionIndex positionIndex = new PositionIndex ();
-		positionIndex.xx = x;
-		positionIndex.yy = y;
-		return positionIndex;
 	}
 
 	/// <summary>
@@ -184,7 +329,7 @@ public class Board : MonoBehaviour {
 		int xIndex = (int)((touchPoint.x - min.x) / cellWidth) + 1;
 		int yIndex = (int)((touchPoint.y - min.y) / cellHeight) + 1;
 
-		selectedBlockTag = getTag (xIndex, yIndex);
+		selectedBlockTag = Consts.GetTag (xIndex, yIndex);
 		return true;
 	}
 
@@ -207,7 +352,7 @@ public class Board : MonoBehaviour {
 			BlockMoveEnd();		
 		}
 
-		return getTag (xIndex, yIndex);
+		return Consts.GetTag (xIndex, yIndex);
 	}
 
 
@@ -227,14 +372,14 @@ public class Board : MonoBehaviour {
 			}
 
 			if (x > 1) {
-				GameObject leftBlock = tagBlockDictionry[getTag(x - 1, y)];
+				GameObject leftBlock = tagBlockDictionry[Consts.GetTag(x - 1, y)];
 				if (newBlock.name == leftBlock.name) {
 					continue;
 				}
 			}
 
 			if (y > 1) {
-				GameObject belowBlock = tagBlockDictionry[getTag(x, y - 1)];
+				GameObject belowBlock = tagBlockDictionry[Consts.GetTag(x, y - 1)];
 				if (newBlock.name == belowBlock.name) {
 					continue;
 				} else {
@@ -245,10 +390,6 @@ public class Board : MonoBehaviour {
 			}
 		}
 		return newBlock;
-	}
-
-	private int getTag(int x, int y) {
-		return Consts.BASE_TAG + 10 * x + y;
 	}
 
 	private Vector2 GetBlockPosition(int x, int y) {
