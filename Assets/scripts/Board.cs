@@ -76,6 +76,7 @@ public class Board : MonoBehaviour {
 			tapBlock.renderer.sortingOrder = DEFAULT_LAYER_SORTING_ORDER + 1;
 			tapBlock.transform.position = touchPoint;
 			exchangeComa(touchPoint);
+			boostBlock(touchPoint);
 		}
 
 		if (Event.current.type == EventType.MouseUp && !isAnimating) {
@@ -307,7 +308,9 @@ public class Board : MonoBehaviour {
 	/// </summary>
 	void boostBlock(Vector2 tapPoint) {
 		GameObject tapBlock = tagBlockDictionry [selectedBlockTag];
-		tapBlock.transform.position = tapPoint;
+		Vector2 max = tapBlock.renderer.bounds.max;
+		Vector2 min = tapBlock.renderer.bounds.min;
+		tapBlock.transform.position = new Vector2 (tapBlock.transform.position.x, tapPoint.y + (max.y - min.y) / 3);
 	}
 
 	/// <summary>
