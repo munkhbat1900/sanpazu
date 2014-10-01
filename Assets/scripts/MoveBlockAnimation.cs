@@ -29,6 +29,7 @@ public class MoveBlockAnimation : MonoBehaviour {
 		if (isMoving) {
 			if ((destinationPoint - transform.position) .magnitude < 0.1) {
 				isMoving = false;
+				transform.position = destinationPoint;
 				return;
 			}
 			transform.position += direction * moveSpeed * Time.deltaTime;
