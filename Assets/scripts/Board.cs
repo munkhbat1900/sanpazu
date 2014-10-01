@@ -292,15 +292,50 @@ public class Board : MonoBehaviour {
 			return;		
 		}
 
-
 		GameObject selectedBlock = tagBlockDictionry [selectedBlockTag];
 
 		tagBlockDictionry [selectedBlockTag] = tagBlockDictionry [passedBlockTag];
 		tagBlockDictionry [passedBlockTag] = selectedBlock;
 
 		PositionIndex passedBlockPositionIndex = Consts.GetPositionIndexFromTag (selectedBlockTag);
-		tagBlockDictionry [selectedBlockTag].transform.position = GetBlockPosition (passedBlockPositionIndex.xx, passedBlockPositionIndex.yy);
+		//tagBlockDictionry [selectedBlockTag].transform.position = GetBlockPosition (passedBlockPositionIndex.xx, passedBlockPositionIndex.yy);
+
+		BlockBezierAnimation (passedBlockTag, selectedBlockTag, tagBlockDictionry [selectedBlockTag]);
 		selectedBlockTag = passedBlockTag;
+	}
+
+	private void BlockBezierAnimation(int fromTag, int toTag, GameObject exchangingBlock) {
+		GameObject exchangeBlock = tagBlockDictionry [toTag];
+		PositionIndex fromPositionIndex = Consts.GetPositionIndexFromTag (fromTag);
+		PositionIndex toPositionIndex = Consts.GetPositionIndexFromTag (toTag);
+		Vector2 startPosition = GetBlockPosition (fromPositionIndex.xx, fromPositionIndex.yy);
+		Vector2 endPosition = GetBlockPosition (toPositionIndex.xx, toPositionIndex.yy);
+
+		Vector2 controlPoint1;
+		Vector2 controlPoint2;
+
+		if (fromPositionIndex.xx != toPositionIndex.xx) {
+			controlPoint1 = new Vector2 (startPosition.x, startPosition.y - cellHeight / 2);
+			controlPoint2 = new Vector2 (endPosition.x, endPosition.y - cellHeight / 2);
+		} else {
+			controlPoint1 = new Vector2 (startPosition.x + cellWidth / 2, startPosition.y);
+			controlPoint2 = new Vector2 (endPosition.x + cellWidth / 2, endPosition.y);
+		}
+
+		Bezier bezier = null;
+		if (fromPositionIndex.xx < toPositionIndex.xx) {
+			bezier = new Bezier (startPosition, controlPoint1, endPosition, endPosition);
+		} else if (fromPositionIndex.xx > toPositionIndex.xx) {
+			bezier = new Bezier (startPosition, startPosition, controlPoint2, endPosition);
+		} else if (fromPositionIndex.yy < toPositionIndex.yy) {
+			bezier = new Bezier (startPosition, controlPoint1, endPosition, endPosition);	
+		} else {
+			bezier = new Bezier (startPosition, startPosition, controlPoint2, endPosition);
+		}
+		//Bezier bezier = new Bezier (startPosition, controlPoint2, controlPoint1, controlPoint2);
+		BezierAnimation bezierAnimation = exchangeBlock.GetComponent<BezierAnimation> ();
+		bezierAnimation.myBezier = bezier;
+		bezierAnimation.isAnimate = true;
 	}
 
 	/// <summary>
