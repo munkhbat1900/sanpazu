@@ -1,30 +1,10 @@
-﻿//using UnityEngine;
-//using System.Collections;
-//
-//public class Bezier : System.Object
-//{
-//	Vector3 CalculateBezierPoint(float t,
-//	                             Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3)
-//	{
-//		float u = 1 - t;
-//		float tt = t * t;
-//		float uu = u * u;
-//		float uuu = uu * u;
-//		float ttt = tt * t;
-//		
-//		Vector3 p = uuu * p0; //first term
-//		p += 3 * uu * t * p1; //second term
-//		p += 3 * u * tt * p2; //third term
-//		p += ttt * p3; //fourth term
-//		
-//		return p;
-//	}
-//}
-
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 
 [System.Serializable]
+/// <summary>
+/// Bezier. reference http://devmag.org.za/2011/04/05/bzier-curves-a-tutorial/ 
+/// </summary>
 public class Bezier : System.Object
 {
 	public Vector3 p0;
@@ -74,43 +54,4 @@ public class Bezier : System.Object
 		
 		return p;
 	}
-
-//	// 0.0 >= t <= 1.0
-//	public Vector3 GetPointAtTime( float t )
-//	{
-//		this.CheckConstant();
-//		float t2 = t * t;
-//		float t3 = t * t * t;
-//		float x = this.Ax * t3 + this.Bx * t2 + this.Cx * t + p0.x;
-//		float y = this.Ay * t3 + this.By * t2 + this.Cy * t + p0.y;
-//		float z = this.Az * t3 + this.Bz * t2 + this.Cz * t + p0.z;
-//		return new Vector3( x, y, z );
-//	}
-//	
-//	private void SetConstant()
-//	{
-//		this.Cx = 3f * ( ( this.p0.x + this.p1.x ) - this.p0.x );
-//		this.Bx = 3f * ( ( this.p3.x + this.p2.x ) - ( this.p0.x + this.p1.x ) ) - this.Cx;
-//		this.Ax = this.p3.x - this.p0.x - this.Cx - this.Bx;
-//		this.Cy = 3f * ( ( this.p0.y + this.p1.y ) - this.p0.y );
-//		this.By = 3f * ( ( this.p3.y + this.p2.y ) - ( this.p0.y + this.p1.y ) ) - this.Cy;
-//		this.Ay = this.p3.y - this.p0.y - this.Cy - this.By;
-//		
-//		this.Cz = 3f * ( ( this.p0.z + this.p1.z ) - this.p0.z );
-//		this.Bz = 3f * ( ( this.p3.z + this.p2.z ) - ( this.p0.z + this.p1.z ) ) - this.Cz;
-//		this.Az = this.p3.z - this.p0.z - this.Cz - this.Bz;
-//	}
-//	
-//	// Check if p0, p1, p2 or p3 have change
-//	private void CheckConstant()
-//	{
-//		if( this.p0 != this.b0 || this.p1 != this.b1 || this.p2 != this.b2 || this.p3 != this.b3 )
-//		{
-//			this.SetConstant();
-//			this.b0 = this.p0;
-//			this.b1 = this.p1;
-//			this.b2 = this.p2;
-//			this.b3 = this.p3;
-//		}
-//	}
 }

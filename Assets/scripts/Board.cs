@@ -34,6 +34,9 @@ public class Board : MonoBehaviour {
 	// don't get touch event while blocks are animating.
 	private bool isAnimating;
 
+	// block exchange Animation flag.
+	private bool isBlockExchanging;
+
 	private void initBoard() {
 		SpriteRenderer sprite = GetComponent<SpriteRenderer> ();
 		boardWidth = sprite.bounds.size.x;
@@ -48,6 +51,7 @@ public class Board : MonoBehaviour {
 		moveBlocksAnimationTime = tagBlockDictionry [Consts.GetTag(1, 1)].GetComponent<MoveBlockAnimation> ().moveTime;
 		shrinkAnimationTime = tagBlockDictionry [Consts.GetTag(1, 1)].GetComponent<ShrinkAnimation>().shrinkTime;
 		isAnimating = false;
+		isBlockExchanging = false;
 	}
 
 	private void PutBlock () {
@@ -298,13 +302,28 @@ public class Board : MonoBehaviour {
 		tagBlockDictionry [passedBlockTag] = selectedBlock;
 
 		PositionIndex passedBlockPositionIndex = Consts.GetPositionIndexFromTag (selectedBlockTag);
-		//tagBlockDictionry [selectedBlockTag].transform.position = GetBlockPosition (passedBlockPositionIndex.xx, passedBlockPositionIndex.yy);
 
-		BlockBezierAnimation (passedBlockTag, selectedBlockTag, tagBlockDictionry [selectedBlockTag]);
+		if (isBlockExchanging) {
+			foreach (var pair in tagBlockDictionry) {
+				GameObject block = tagBlockDictionry [pair.Key];
+				block.GetComponent<BezierAnimation>().isStopAnimation = true;
+			}		
+		}
+
+		//BlockBezierAnimation (passedBlockTag, selectedBlockTag);
+		StartCoroutine ("BezierCoroutine", passedBlockTag);
 		selectedBlockTag = passedBlockTag;
 	}
 
-	private void BlockBezierAnimation(int fromTag, int toTag, GameObject exchangingBlock) {
+	IEnumerator BezierCoroutine(int fromTag) {
+		BlockBezierAnimation (fromTag, selectedBlockTag);
+		yield return new WaitForSeconds (0.1f);
+		isBlockExchanging = false;
+		GameObject exchangeBlock = tagBlockDictionry [fromTag];
+
+	}
+
+	private void BlockBezierAnimation(int fromTag, int toTag) {
 		GameObject exchangeBlock = tagBlockDictionry [toTag];
 		PositionIndex fromPositionIndex = Consts.GetPositionIndexFromTag (fromTag);
 		PositionIndex toPositionIndex = Consts.GetPositionIndexFromTag (toTag);
