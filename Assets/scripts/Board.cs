@@ -31,6 +31,9 @@ public class Board : MonoBehaviour {
 
 	private float shrinkAnimationTime;
 
+	// don't get touch event while blocks are animating.
+	private bool isAnimating;
+
 	private void initBoard() {
 		SpriteRenderer sprite = GetComponent<SpriteRenderer> ();
 		boardWidth = sprite.bounds.size.x;
@@ -44,6 +47,7 @@ public class Board : MonoBehaviour {
 		PutBlock ();
 		moveBlocksAnimationTime = tagBlockDictionry [Consts.GetTag(1, 1)].GetComponent<MoveBlockAnimation> ().moveTime;
 		shrinkAnimationTime = tagBlockDictionry [Consts.GetTag(1, 1)].GetComponent<ShrinkAnimation>().shrinkTime;
+		isAnimating = false;
 	}
 
 	private void PutBlock () {
@@ -59,14 +63,14 @@ public class Board : MonoBehaviour {
 
 	void OnGUI ()
 	{
-		if (Event.current.type == EventType.MouseDown) {
+		if (Event.current.type == EventType.MouseDown && !isAnimating) {
 			Vector2 touchPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 			if (computeSelectedBlockTag(touchPoint)){
 				boostBlock(touchPoint);
 			}
 		} 
 
-		if (Event.current.type == EventType.MouseDrag) {
+		if (Event.current.type == EventType.MouseDrag && !isAnimating) {
 			Vector2 touchPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 			GameObject tapBlock = tagBlockDictionry [selectedBlockTag];
 			tapBlock.renderer.sortingOrder = DEFAULT_LAYER_SORTING_ORDER + 1;
@@ -74,7 +78,7 @@ public class Board : MonoBehaviour {
 			exchangeComa(touchPoint);
 		}
 
-		if (Event.current.type == EventType.MouseUp) {
+		if (Event.current.type == EventType.MouseUp && !isAnimating) {
 			BlockMoveEnd();
 		}
 	}
@@ -91,7 +95,10 @@ public class Board : MonoBehaviour {
 		}
 		SortedDictionary<int, int> successBlockMap = puzzleRule.getSuccessBlock (tagBlockDictionry);
 		if (successBlockMap != null && successBlockMap.Count != 0) {
+			isAnimating = true;
 			end (successBlockMap);
+		} else {
+			isAnimating = false;	
 		}
 	}
 	 
