@@ -20,7 +20,8 @@ public class MoveBlockAnimation : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-		moveSpeed = (destinationPoint - transform.position).magnitude / moveTime;
+		//moveSpeed = (destinationPoint - transform.position).magnitude / moveTime;
+		moveSpeed = 8.0f;
 		direction = new Vector3 (0, 1, 0);
 	}
 	

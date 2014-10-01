@@ -29,6 +29,8 @@ public class Board : MonoBehaviour {
 
 	private float moveBlocksAnimationTime;
 
+	private float shrinkAnimationTime;
+
 	private void initBoard() {
 		SpriteRenderer sprite = GetComponent<SpriteRenderer> ();
 		boardWidth = sprite.bounds.size.x;
@@ -41,6 +43,7 @@ public class Board : MonoBehaviour {
 		puzzleRule = new PuzzleRule ();
 		PutBlock ();
 		moveBlocksAnimationTime = tagBlockDictionry [Consts.GetTag(1, 1)].GetComponent<MoveBlockAnimation> ().moveTime;
+		shrinkAnimationTime = tagBlockDictionry [Consts.GetTag(1, 1)].GetComponent<ShrinkAnimation>().shrinkTime;
 	}
 
 	private void PutBlock () {
@@ -80,15 +83,86 @@ public class Board : MonoBehaviour {
 	/// process at the end of block moving.
 	/// </summary>
 	void BlockMoveEnd() {
-		GameObject tapBlock = tagBlockDictionry [selectedBlockTag];
-		tapBlock.renderer .sortingOrder = DEFAULT_LAYER_SORTING_ORDER;
-		selectedBlockTag = -1;
-		resetBlockPosition();
+		if (selectedBlockTag != -1) {
+			GameObject tapBlock = tagBlockDictionry [selectedBlockTag];
+			tapBlock.renderer.sortingOrder = DEFAULT_LAYER_SORTING_ORDER;
+			selectedBlockTag = -1;
+			resetBlockPosition ();
+		}
 		SortedDictionary<int, int> successBlockMap = puzzleRule.getSuccessBlock (tagBlockDictionry);
 		if (successBlockMap != null && successBlockMap.Count != 0) {
-			generateNewBlocks (successBlockMap);
-			StartCoroutine ("removeBlocksAndGenerateNewBlocks", successBlockMap);
-			StartCoroutine("moveBlocks", moveBlocksAnimationTime);
+			end (successBlockMap);
+		}
+	}
+	 
+	private void end(SortedDictionary<int, int> successBlockMap) {
+		generateNewBlocks (successBlockMap);
+		StartCoroutine ("removeBlocksAndGenerateNewBlocks", successBlockMap);
+	}
+
+	IEnumerator removeBlocksAndGenerateNewBlocks(SortedDictionary<int, int> successBlockMap) {
+		SortedDictionary<int, int> tmpSuccessBlockMap = new SortedDictionary<int, int>(successBlockMap);
+		while (successBlockMap.Count != 0) {
+			SortedDictionary<int, int> removinBlockDictionary = getRemovingBlocksByType (successBlockMap);
+			removeBlocksAnimation (removinBlockDictionary);
+			yield return new WaitForSeconds (shrinkAnimationTime);
+			removeBlocks (removinBlockDictionary);
+			removeFromSuccessBlockMap(successBlockMap, removinBlockDictionary);
+		}
+		moveBlockAnimation (tmpSuccessBlockMap);
+		int successCount = SuccessCount (tmpSuccessBlockMap);
+		StartCoroutine ("moveBlocks", successCount);
+	}
+
+	IEnumerator moveBlocks(int successCount) {
+		yield return new WaitForSeconds (moveBlocksAnimationTime);
+		BlockMoveEnd ();
+	}
+
+	private void moveBlockAnimation(SortedDictionary<int, int> successBlockMap) {
+		searchNewPosition (successBlockMap);
+		List<int> keyList = new List<int>(tagBlockDictionry.Keys);
+		// key old tag. value new tag.
+		SortedDictionary<int, int> movedBlockDictionary = new SortedDictionary<int, int> ();
+		
+		SortedDictionary<int, GameObject> newTagBlockDictionary = new SortedDictionary<int, GameObject> ();
+		
+		foreach (var key in keyList) {
+			GameObject block = tagBlockDictionry[key];
+			
+			int nextPosX = block.GetComponent<NextPosition>().X;
+			int nextPosY = block.GetComponent<NextPosition>().Y;
+			
+			if (nextPosX != int.MaxValue && nextPosY != int.MaxValue) {
+				Vector2 newPosition = GetBlockPosition(nextPosX, nextPosY);
+				PositionIndex positionIndex = Consts.GetPositionIndexFromTag(key);
+				block.GetComponent<MoveBlockAnimation>().DestinationPoint = newPosition;
+				block.GetComponent<MoveBlockAnimation>().IsMoving = true;
+				
+				int newTag = Consts.GetTag(nextPosX, nextPosY);
+				movedBlockDictionary[key] = newTag;
+				newTagBlockDictionary.Add(newTag, block);
+				block.GetComponent<NextPosition>().X = int.MaxValue;
+				block.GetComponent<NextPosition>().Y = int.MaxValue;
+			} else {
+				newTagBlockDictionary.Add(key, block);
+			}
+		}
+		tagBlockDictionry.Clear ();
+		tagBlockDictionry = newTagBlockDictionary;
+	}
+
+	private void removeBlocksAnimation(SortedDictionary<int, int> successBlockMap) {
+		foreach (var pair in successBlockMap) {
+			GameObject block = tagBlockDictionry[pair.Key];
+			block.GetComponent<ShrinkAnimation>().IsShrinking = true;
+		}
+	}
+
+	private void removeBlocks(SortedDictionary<int, int> successBlockMap) {
+		foreach (var pair in successBlockMap) {
+			Destroy(tagBlockDictionry[pair.Key]);
+			tagBlockDictionry.Remove(pair.Key);
 		}
 	}
 
@@ -96,7 +170,7 @@ public class Board : MonoBehaviour {
 		List<int> values = new List<int>(successBlockMap.Values);
 		values.Sort ();
 		int minValue = values[0];
-
+		
 		SortedDictionary<int, int> removinBlockDictionary = new SortedDictionary<int, int> ();
 		foreach (var pair in successBlockMap) {
 			if (pair.Value == minValue) {
@@ -105,7 +179,22 @@ public class Board : MonoBehaviour {
 		}
 		return removinBlockDictionary;
 	}
-
+	
+	private int SuccessCount (SortedDictionary<int, int> successBlockMap) {
+		List<int> values = new List<int>(successBlockMap.Values);
+		values.Sort ();
+		int minValue = values[0];
+		int successCount = 1;
+		
+		SortedDictionary<int, int> removinBlockDictionary = new SortedDictionary<int, int> ();
+		foreach (var pair in successBlockMap) {
+			if (pair.Value != minValue) {
+				successCount++;
+			}		
+		}
+		return successCount;
+	}
+	
 	private SortedDictionary<int, int> removeFromSuccessBlockMap(SortedDictionary<int, int> successBlockMap, 
 	                                                             SortedDictionary<int, int> removinBlockDictionary) {
 		foreach (var pair in removinBlockDictionary) {
@@ -116,44 +205,11 @@ public class Board : MonoBehaviour {
 		return successBlockMap;
 	}
 
-	IEnumerator removeBlocksAndGenerateNewBlocks(SortedDictionary<int, int> successBlockMap) {
-		SortedDictionary<int, int> tmpSuccessBlockMap = new SortedDictionary<int, int>(successBlockMap);
-		while (successBlockMap.Count != 0) {
-			SortedDictionary<int, int> removinBlockDictionary = getRemovingBlocksByType (successBlockMap);
-			float shrinkAnimationTime = removeBlocksAnimation (removinBlockDictionary);
-			yield return new WaitForSeconds (shrinkAnimationTime);
-			removeBlocks (removinBlockDictionary);
-			removeFromSuccessBlockMap(successBlockMap, removinBlockDictionary);
-		}
-		moveBlockAnimation (tmpSuccessBlockMap);
-	}
-
-	IEnumerator moveBlocks(float moveBlocksAnimationTime) {
-		yield return new WaitForSeconds (moveBlocksAnimationTime);
-	}
-
-	float removeBlocksAnimation(SortedDictionary<int, int> successBlockMap) {
-		float animationTime = 0f;
-		foreach (var pair in successBlockMap) {
-			GameObject block = tagBlockDictionry[pair.Key];
-			block.GetComponent<ShrinkAnimation>().IsShrinking = true;
-			animationTime = block.GetComponent<ShrinkAnimation>().shrinkTime;
-		}
-		return animationTime;
-	}
-
-	private void removeBlocks(SortedDictionary<int, int> successBlockMap) {
-		foreach (var pair in successBlockMap) {
-			Destroy(tagBlockDictionry[pair.Key]);
-			tagBlockDictionry.Remove(pair.Key);
-		}
-	}
-
 	private void generateNewBlocks(SortedDictionary<int, int> successBlockMap) {
 		int[] ycounter  = new int[Consts.BOARD_SIZE_X + 1];
 		
 		for (int i = 1; i <= Consts.BOARD_SIZE_X; i++) {
-			ycounter[i] = 0;
+			ycounter[i] = -1;
 		}
 
 		foreach (var pair in successBlockMap) {
@@ -194,42 +250,12 @@ public class Board : MonoBehaviour {
 		}
 		
 		nextPosY++;
+		if (nextPosY == 0) {
+			nextPosY++;		
+		}
 		
 		block.GetComponent<NextPosition> ().X = positionIndex.xx;
 		block.GetComponent<NextPosition> ().Y = nextPosY;
-	}
-
-	private void moveBlockAnimation(SortedDictionary<int, int> successBlockMap) {
-		searchNewPosition (successBlockMap);
-		List<int> keyList = new List<int>(tagBlockDictionry.Keys);
-		// key old tag. value new tag.
-		SortedDictionary<int, int> movedBlockDictionary = new SortedDictionary<int, int> ();
-
-		SortedDictionary<int, GameObject> newTagBlockDictionary = new SortedDictionary<int, GameObject> ();
-
-		foreach (var key in keyList) {
-			GameObject block = tagBlockDictionry[key];
-
-			int nextPosX = block.GetComponent<NextPosition>().X;
-			int nextPosY = block.GetComponent<NextPosition>().Y;
-
-			if (nextPosX != int.MaxValue && nextPosY != int.MaxValue) {
-				Vector2 newPosition = GetBlockPosition(nextPosX, nextPosY);
-				PositionIndex positionIndex = Consts.GetPositionIndexFromTag(key);
-				block.GetComponent<MoveBlockAnimation>().DestinationPoint = newPosition;
-				block.GetComponent<MoveBlockAnimation>().IsMoving = true;
-
-				int newTag = Consts.GetTag(nextPosX, nextPosY);
-				movedBlockDictionary[key] = newTag;
-				newTagBlockDictionary.Add(newTag, block);
-				block.GetComponent<NextPosition>().X = int.MaxValue;
-				block.GetComponent<NextPosition>().Y = int.MaxValue;
-			} else {
-				newTagBlockDictionary.Add(key, block);
-			}
-		}
-		tagBlockDictionry.Clear ();
-		tagBlockDictionry = newTagBlockDictionary;
 	}
 
 	private GameObject createRandomNewObject() {
