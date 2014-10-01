@@ -27,6 +27,8 @@ public class Board : MonoBehaviour {
 
 	private PuzzleRule puzzleRule;
 
+	private float moveBlocksAnimationTime;
+
 	private void initBoard() {
 		SpriteRenderer sprite = GetComponent<SpriteRenderer> ();
 		boardWidth = sprite.bounds.size.x;
@@ -38,6 +40,7 @@ public class Board : MonoBehaviour {
 		this.boardSprite = sprite;
 		puzzleRule = new PuzzleRule ();
 		PutBlock ();
+		moveBlocksAnimationTime = tagBlockDictionry [Consts.GetTag(1, 1)].GetComponent<MoveBlockAnimation> ().moveTime;
 	}
 
 	private void PutBlock () {
@@ -62,7 +65,6 @@ public class Board : MonoBehaviour {
 
 		if (Event.current.type == EventType.MouseDrag) {
 			Vector2 touchPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-			//Debug.Log(string.Format("drag point = {0}", touchPoint));
 			GameObject tapBlock = tagBlockDictionry [selectedBlockTag];
 			tapBlock.renderer.sortingOrder = DEFAULT_LAYER_SORTING_ORDER + 1;
 			tapBlock.transform.position = touchPoint;
@@ -70,7 +72,6 @@ public class Board : MonoBehaviour {
 		}
 
 		if (Event.current.type == EventType.MouseUp) {
-			//Debug.Log("mouse up");
 			BlockMoveEnd();
 		}
 	}
@@ -85,8 +86,9 @@ public class Board : MonoBehaviour {
 		resetBlockPosition();
 		SortedDictionary<int, int> successBlockMap = puzzleRule.getSuccessBlock (tagBlockDictionry);
 		if (successBlockMap != null && successBlockMap.Count != 0) {
-			//generateNewBlocks (successBlockMap);
+			generateNewBlocks (successBlockMap);
 			StartCoroutine ("removeBlocksAndGenerateNewBlocks", successBlockMap);
+			StartCoroutine("moveBlocks", moveBlocksAnimationTime);
 		}
 	}
 
@@ -115,6 +117,7 @@ public class Board : MonoBehaviour {
 	}
 
 	IEnumerator removeBlocksAndGenerateNewBlocks(SortedDictionary<int, int> successBlockMap) {
+		SortedDictionary<int, int> tmpSuccessBlockMap = new SortedDictionary<int, int>(successBlockMap);
 		while (successBlockMap.Count != 0) {
 			SortedDictionary<int, int> removinBlockDictionary = getRemovingBlocksByType (successBlockMap);
 			float shrinkAnimationTime = removeBlocksAnimation (removinBlockDictionary);
@@ -122,8 +125,7 @@ public class Board : MonoBehaviour {
 			removeBlocks (removinBlockDictionary);
 			removeFromSuccessBlockMap(successBlockMap, removinBlockDictionary);
 		}
-		//float moveBlocksAnimationTime = moveBlockAnimation (successBlockMap);
-		//StartCoroutine("moveBlocks", moveBlocksAnimationTime);
+		moveBlockAnimation (tmpSuccessBlockMap);
 	}
 
 	IEnumerator moveBlocks(float moveBlocksAnimationTime) {
@@ -192,19 +194,16 @@ public class Board : MonoBehaviour {
 		}
 		
 		nextPosY++;
-
-		//Debug.Log (string.Format ("type = {0} newPosX = {1} newPosY = {2}", block.name, positionIndex.xx, nextPosY));
 		
 		block.GetComponent<NextPosition> ().X = positionIndex.xx;
 		block.GetComponent<NextPosition> ().Y = nextPosY;
 	}
 
-	private float moveBlockAnimation(SortedDictionary<int, int> successBlockMap) {
+	private void moveBlockAnimation(SortedDictionary<int, int> successBlockMap) {
 		searchNewPosition (successBlockMap);
 		List<int> keyList = new List<int>(tagBlockDictionry.Keys);
 		// key old tag. value new tag.
 		SortedDictionary<int, int> movedBlockDictionary = new SortedDictionary<int, int> ();
-		float animationTime = 0f;
 
 		SortedDictionary<int, GameObject> newTagBlockDictionary = new SortedDictionary<int, GameObject> ();
 
@@ -219,7 +218,6 @@ public class Board : MonoBehaviour {
 				PositionIndex positionIndex = Consts.GetPositionIndexFromTag(key);
 				block.GetComponent<MoveBlockAnimation>().DestinationPoint = newPosition;
 				block.GetComponent<MoveBlockAnimation>().IsMoving = true;
-				animationTime = block.GetComponent<MoveBlockAnimation>().moveTime;
 
 				int newTag = Consts.GetTag(nextPosX, nextPosY);
 				movedBlockDictionary[key] = newTag;
@@ -232,7 +230,6 @@ public class Board : MonoBehaviour {
 		}
 		tagBlockDictionry.Clear ();
 		tagBlockDictionry = newTagBlockDictionary;
-		return animationTime;
 	}
 
 	private GameObject createRandomNewObject() {
