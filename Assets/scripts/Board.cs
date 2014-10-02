@@ -80,6 +80,8 @@ public class Board : MonoBehaviour {
 		if (Event.current.type == EventType.MouseDown && !isAnimating) {
 			Vector2 touchPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 			if (computeSelectedBlockTag(touchPoint)){
+				GameObject tapBlock = tagBlockDictionry [selectedBlockTag];
+				tapBlock.renderer.sortingOrder = DEFAULT_LAYER_SORTING_ORDER + 1;
 				boostBlock(touchPoint);
 			}
 		} 
@@ -125,7 +127,6 @@ public class Board : MonoBehaviour {
 	}
 	 
 	private void end(SortedDictionary<int, int> successBlockMap) {
-		generateNewBlocks (successBlockMap);
 		StartCoroutine ("removeBlocksAndGenerateNewBlocks", successBlockMap);
 	}
 
@@ -138,13 +139,14 @@ public class Board : MonoBehaviour {
 			removeBlocks (removinBlockDictionary);
 			removeFromSuccessBlockMap(successBlockMap, removinBlockDictionary);
 		}
+		generateNewBlocks (tmpSuccessBlockMap);
 		moveBlockAnimation (tmpSuccessBlockMap);
 		int successCount = SuccessCount (tmpSuccessBlockMap);
 		StartCoroutine ("moveBlocks", successCount);
 	}
 
 	IEnumerator moveBlocks(int successCount) {
-		yield return new WaitForSeconds (moveBlocksAnimationTime);
+		yield return new WaitForSeconds (moveBlocksAnimationTime / 1.5f);
 		BlockMoveEnd ();
 	}
 

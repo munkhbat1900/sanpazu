@@ -26,7 +26,7 @@ public class BezierAnimation : MonoBehaviour
 			Vector3 vec = myBezier.GetPointAtTime (t);
 			transform.position = vec;
 		
-			t += 0.1f;
+			t += 0.15f;
 			if (t >= 1f) {
 				isAnimate = false;
 				transform.position = myBezier.p3;
