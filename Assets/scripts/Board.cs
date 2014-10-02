@@ -15,7 +15,7 @@ public class Board : MonoBehaviour {
 	private float boardHeight;
 	// location and block dictionary
 	private SortedDictionary<int, GameObject> tagBlockDictionry;
-	// coma array.  
+	// coma array.
 	public GameObject[] Blocks;
 	// game board sprite
 	private SpriteRenderer boardSprite;
@@ -46,6 +46,18 @@ public class Board : MonoBehaviour {
 
 	private bool isDragging;
 
+	// number of continuous attackNumber Label
+	public GameObject attackNumberLabel;
+	// number of continuous attack text Label
+	public GameObject attackTextLabel;
+	// queue attack number labels 
+	private Queue<GameObject> tagAttackNumberLabelQueue;
+	// queue attack text labels 
+	private Queue<GameObject> tagAttackTextLabelQueue;
+	// list contains tags of square which is showing attak text label.
+	private List<int> tagShowLabelList;
+	private int successCounter;
+
 	private void initBoard() {
 		SpriteRenderer sprite = GetComponent<SpriteRenderer> ();
 		boardWidth = sprite.bounds.size.x;
@@ -62,6 +74,10 @@ public class Board : MonoBehaviour {
 		isAnimating = false;
 		isBlockExchanging = false;
 		selectedBlockTag = -1;
+		tagShowLabelList = new List<int> ();
+
+		tagAttackNumberLabelQueue = new Queue<GameObject> ();
+		tagAttackTextLabelQueue = new Queue<GameObject> ();
 	}
 
 	private void PutBlock () {
@@ -79,6 +95,7 @@ public class Board : MonoBehaviour {
 	{
 		if (Event.current.type == EventType.MouseDown && !isAnimating) {
 			Vector2 touchPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+			Debug.Log("touchPoint = " + touchPoint);
 			if (computeSelectedBlockTag(touchPoint)){
 				GameObject tapBlock = tagBlockDictionry [selectedBlockTag];
 				tapBlock.renderer.sortingOrder = DEFAULT_LAYER_SORTING_ORDER + 1;
@@ -101,6 +118,7 @@ public class Board : MonoBehaviour {
 		}
 
 		if (Event.current.type == EventType.MouseUp && !isAnimating) {
+			successCounter = 0;
 			BlockMoveEnd();
 		}
 	}
@@ -122,7 +140,7 @@ public class Board : MonoBehaviour {
 			isAnimating = true;
 			end (successBlockMap);
 		} else {
-			isAnimating = false;	
+			isAnimating = false;
 		}
 	}
 	 
@@ -135,19 +153,63 @@ public class Board : MonoBehaviour {
 		while (successBlockMap.Count != 0) {
 			SortedDictionary<int, int> removinBlockDictionary = getRemovingBlocksByType (successBlockMap);
 			removeBlocksAnimation (removinBlockDictionary);
+			// show label
+			successCounter++;
+			if (successCounter > 1) {
+				ShowLabel(removinBlockDictionary);
+			}
 			yield return new WaitForSeconds (shrinkAnimationTime);
 			removeBlocks (removinBlockDictionary);
 			removeFromSuccessBlockMap(successBlockMap, removinBlockDictionary);
 		}
 		generateNewBlocks (tmpSuccessBlockMap);
 		moveBlockAnimation (tmpSuccessBlockMap);
-		int successCount = SuccessCount (tmpSuccessBlockMap);
-		StartCoroutine ("moveBlocks", successCount);
+		StartCoroutine ("moveBlocks");
 	}
 
-	IEnumerator moveBlocks(int successCount) {
+	private void deleteLabels() {
+		while (tagAttackTextLabelQueue.Count != 0) {
+			GameObject label1 = tagAttackNumberLabelQueue.Dequeue();
+			GameObject label2 = tagAttackTextLabelQueue.Dequeue();
+			Destroy(label1);
+			Destroy(label2);
+		}
+
+	}
+
+	IEnumerator moveBlocks() {
 		yield return new WaitForSeconds (moveBlocksAnimationTime / 1.5f);
+		deleteLabels ();
 		BlockMoveEnd ();
+	}
+
+	private void ShowLabel(SortedDictionary<int, int> removinBlockDictionary) {
+		foreach (var pair in removinBlockDictionary) {
+			int tag = pair.Key;
+			if (tagShowLabelList.Contains(tag)) {
+				continue; 
+			}
+
+			PositionIndex positionIndex = Consts.GetPositionIndexFromTag(tag);
+			Vector2 squareCenterPosition = GetBlockPosition(positionIndex.xx, positionIndex.yy);
+
+			Vector2 attackNumberLabelPosition = Camera.main.WorldToViewportPoint (new Vector2(squareCenterPosition.x, squareCenterPosition.y + cellHeight / 4));
+			Debug.Log("attackNumberLabelPosition = " + attackNumberLabelPosition);
+			GameObject attackNumberGuiLabel = (GameObject)Instantiate(attackNumberLabel, attackNumberLabelPosition, transform.rotation);
+			attackNumberGuiLabel.guiText.text = successCounter.ToString();
+			attackNumberGuiLabel.SetActive(true);
+			tagAttackNumberLabelQueue.Enqueue(attackNumberGuiLabel);
+
+			Vector2 attackTextLabelPosition = Camera.main.WorldToViewportPoint (new Vector2(squareCenterPosition.x, squareCenterPosition.y - cellHeight / 4));
+			Debug.Log("attackTextLabelPosition = " + attackTextLabelPosition);
+			GameObject attackTextGuiLabel = (GameObject)Instantiate(attackTextLabel, attackTextLabelPosition, transform.rotation);
+			attackTextGuiLabel.SetActive(true);
+			tagAttackTextLabelQueue.Enqueue(attackTextGuiLabel);
+
+			tagShowLabelList.Add(tag);
+
+			break;
+		}
 	}
 
 	private void moveBlockAnimation(SortedDictionary<int, int> successBlockMap) {
@@ -211,20 +273,20 @@ public class Board : MonoBehaviour {
 		return removinBlockDictionary;
 	}
 	
-	private int SuccessCount (SortedDictionary<int, int> successBlockMap) {
-		List<int> values = new List<int>(successBlockMap.Values);
-		values.Sort ();
-		int minValue = values[0];
-		int successCount = 1;
-		
-		SortedDictionary<int, int> removinBlockDictionary = new SortedDictionary<int, int> ();
-		foreach (var pair in successBlockMap) {
-			if (pair.Value != minValue) {
-				successCount++;
-			}		
-		}
-		return successCount;
-	}
+//	private int SuccessCount (SortedDictionary<int, int> successBlockMap) {
+//		List<int> values = new List<int>(successBlockMap.Values);
+//		values.Sort ();
+//		int minValue = values[0];
+//		int successCount = 1;
+//		
+//		SortedDictionary<int, int> removinBlockDictionary = new SortedDictionary<int, int> ();
+//		foreach (var pair in successBlockMap) {
+//			if (pair.Value != minValue) {
+//				successCount++;
+//			}		
+//		}
+//		return successCount;
+//	}
 	
 	private SortedDictionary<int, int> removeFromSuccessBlockMap(SortedDictionary<int, int> successBlockMap, 
 	                                                             SortedDictionary<int, int> removinBlockDictionary) {
