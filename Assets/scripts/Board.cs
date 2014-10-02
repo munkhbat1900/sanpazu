@@ -37,6 +37,9 @@ public class Board : MonoBehaviour {
 	// block exchange Animation flag.
 	private bool isBlockExchanging;
 
+	// puzzle operating time.
+	private float puzzleTime;
+
 	private void initBoard() {
 		SpriteRenderer sprite = GetComponent<SpriteRenderer> ();
 		boardWidth = sprite.bounds.size.x;
@@ -52,6 +55,7 @@ public class Board : MonoBehaviour {
 		shrinkAnimationTime = tagBlockDictionry [Consts.GetTag(1, 1)].GetComponent<ShrinkAnimation>().shrinkTime;
 		isAnimating = false;
 		isBlockExchanging = false;
+		selectedBlockTag = -1;
 	}
 
 	private void PutBlock () {
@@ -68,13 +72,14 @@ public class Board : MonoBehaviour {
 	void OnGUI ()
 	{
 		if (Event.current.type == EventType.MouseDown && !isAnimating) {
+			Debug.Log("mouse down");
 			Vector2 touchPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 			if (computeSelectedBlockTag(touchPoint)){
 				boostBlock(touchPoint);
 			}
 		} 
 
-		if (Event.current.type == EventType.MouseDrag && !isAnimating) {
+		if (Event.current.type == EventType.MouseDrag && !isAnimating && selectedBlockTag != -1) {
 			Vector2 touchPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 			GameObject tapBlock = tagBlockDictionry [selectedBlockTag];
 			tapBlock.renderer.sortingOrder = DEFAULT_LAYER_SORTING_ORDER + 1;
@@ -467,5 +472,12 @@ public class Board : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
+		if (selectedBlockTag != -1 && (puzzleTime < Consts.PUZZLE_OPERATION_LIMIT)) {
+			puzzleTime += Time.deltaTime;		
+		}
+		if (selectedBlockTag != -1 && (puzzleTime >= Consts.PUZZLE_OPERATION_LIMIT)) {
+			puzzleTime = 0f;
+			BlockMoveEnd();		
+		}
 	}
 }

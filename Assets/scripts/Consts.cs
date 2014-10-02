@@ -11,6 +11,8 @@ public static class Consts : System.Object {
 	public const int BASE_TAG = 10000;
 	// block number which is regarded as success
 	public const int BLOCK_SUCCESS_COUNT = 3;
+	// puzzle operating time limit
+	public const float PUZZLE_OPERATION_LIMIT = 4.0f;
 
 	public static int GetTag(int x, int y) {
 		int yy = y;
