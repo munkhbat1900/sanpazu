@@ -437,14 +437,16 @@ public class Board : MonoBehaviour {
 
 			if (x > 1) {
 				GameObject leftBlock = tagBlockDictionry[Consts.GetTag(x - 1, y)];
-				if (newBlock.name == leftBlock.name) {
+				// TODO FIX THIS
+				if (leftBlock.name.Contains(newBlock.name)) {
 					continue;
 				}
 			}
 
 			if (y > 1) {
 				GameObject belowBlock = tagBlockDictionry[Consts.GetTag(x, y - 1)];
-				if (newBlock.name == belowBlock.name) {
+				// TODO FIX THIS
+				if (belowBlock.name.Contains(newBlock.name)) {
 					continue;
 				} else {
 					break;
