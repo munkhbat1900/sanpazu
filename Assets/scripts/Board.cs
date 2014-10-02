@@ -40,6 +40,12 @@ public class Board : MonoBehaviour {
 	// puzzle operating time.
 	private float puzzleTime;
 
+	public GameObject timeBar;
+
+	private GameObject timeBarInstance;
+
+	private bool isDragging;
+
 	private void initBoard() {
 		SpriteRenderer sprite = GetComponent<SpriteRenderer> ();
 		boardWidth = sprite.bounds.size.x;
@@ -72,7 +78,6 @@ public class Board : MonoBehaviour {
 	void OnGUI ()
 	{
 		if (Event.current.type == EventType.MouseDown && !isAnimating) {
-			Debug.Log("mouse down");
 			Vector2 touchPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 			if (computeSelectedBlockTag(touchPoint)){
 				boostBlock(touchPoint);
@@ -86,6 +91,11 @@ public class Board : MonoBehaviour {
 			tapBlock.transform.position = touchPoint;
 			exchangeComa(touchPoint);
 			boostBlock(touchPoint);
+			if (!isDragging) {
+				timeBarInstance = (GameObject)Instantiate (timeBar, timeBar.transform.position, transform.rotation);
+				timeBarInstance.GetComponent<ShrinkAnimation> ().IsShrinking = true;
+				isDragging = true;
+			}
 		}
 
 		if (Event.current.type == EventType.MouseUp && !isAnimating) {
@@ -102,6 +112,8 @@ public class Board : MonoBehaviour {
 			tapBlock.renderer.sortingOrder = DEFAULT_LAYER_SORTING_ORDER;
 			selectedBlockTag = -1;
 			resetBlockPosition ();
+			Destroy(timeBarInstance);
+			isDragging = false;
 		}
 		SortedDictionary<int, int> successBlockMap = puzzleRule.getSuccessBlock (tagBlockDictionry);
 		if (successBlockMap != null && successBlockMap.Count != 0) {
@@ -301,13 +313,6 @@ public class Board : MonoBehaviour {
 			return;		
 		}
 
-		GameObject selectedBlock = tagBlockDictionry [selectedBlockTag];
-
-		tagBlockDictionry [selectedBlockTag] = tagBlockDictionry [passedBlockTag];
-		tagBlockDictionry [passedBlockTag] = selectedBlock;
-
-		PositionIndex passedBlockPositionIndex = Consts.GetPositionIndexFromTag (selectedBlockTag);
-
 		if (isBlockExchanging) {
 			foreach (var pair in tagBlockDictionry) {
 				GameObject block = tagBlockDictionry [pair.Key];
@@ -315,7 +320,15 @@ public class Board : MonoBehaviour {
 			}		
 		}
 
-		//BlockBezierAnimation (passedBlockTag, selectedBlockTag);
+		isBlockExchanging = true;
+
+		GameObject selectedBlock = tagBlockDictionry [selectedBlockTag];
+
+		tagBlockDictionry [selectedBlockTag] = tagBlockDictionry [passedBlockTag];
+		tagBlockDictionry [passedBlockTag] = selectedBlock;
+
+		PositionIndex passedBlockPositionIndex = Consts.GetPositionIndexFromTag (selectedBlockTag);
+
 		StartCoroutine ("BezierCoroutine", passedBlockTag);
 		selectedBlockTag = passedBlockTag;
 	}
