@@ -95,7 +95,6 @@ public class Board : MonoBehaviour {
 	{
 		if (Event.current.type == EventType.MouseDown && !isAnimating) {
 			Vector2 touchPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-			Debug.Log("touchPoint = " + touchPoint);
 			if (computeSelectedBlockTag(touchPoint)){
 				GameObject tapBlock = tagBlockDictionry [selectedBlockTag];
 				tapBlock.renderer.sortingOrder = DEFAULT_LAYER_SORTING_ORDER + 1;
@@ -118,7 +117,7 @@ public class Board : MonoBehaviour {
 		}
 
 		if (Event.current.type == EventType.MouseUp && !isAnimating) {
-			successCounter = 0;
+			//successCounter = 0;
 			BlockMoveEnd();
 		}
 	}
@@ -141,6 +140,8 @@ public class Board : MonoBehaviour {
 			end (successBlockMap);
 		} else {
 			isAnimating = false;
+			deleteLabels ();
+			successCounter = 0;
 		}
 	}
 	 
@@ -160,6 +161,7 @@ public class Board : MonoBehaviour {
 			}
 			yield return new WaitForSeconds (shrinkAnimationTime);
 			removeBlocks (removinBlockDictionary);
+			yield return new WaitForSeconds(0.3f);
 			removeFromSuccessBlockMap(successBlockMap, removinBlockDictionary);
 		}
 		generateNewBlocks (tmpSuccessBlockMap);
@@ -179,7 +181,6 @@ public class Board : MonoBehaviour {
 
 	IEnumerator moveBlocks() {
 		yield return new WaitForSeconds (moveBlocksAnimationTime / 1.5f);
-		deleteLabels ();
 		BlockMoveEnd ();
 	}
 
@@ -194,14 +195,14 @@ public class Board : MonoBehaviour {
 			Vector2 squareCenterPosition = GetBlockPosition(positionIndex.xx, positionIndex.yy);
 
 			Vector2 attackNumberLabelPosition = Camera.main.WorldToViewportPoint (new Vector2(squareCenterPosition.x, squareCenterPosition.y + cellHeight / 4));
-			Debug.Log("attackNumberLabelPosition = " + attackNumberLabelPosition);
+
 			GameObject attackNumberGuiLabel = (GameObject)Instantiate(attackNumberLabel, attackNumberLabelPosition, transform.rotation);
 			attackNumberGuiLabel.guiText.text = successCounter.ToString();
 			attackNumberGuiLabel.SetActive(true);
 			tagAttackNumberLabelQueue.Enqueue(attackNumberGuiLabel);
 
 			Vector2 attackTextLabelPosition = Camera.main.WorldToViewportPoint (new Vector2(squareCenterPosition.x, squareCenterPosition.y - cellHeight / 4));
-			Debug.Log("attackTextLabelPosition = " + attackTextLabelPosition);
+
 			GameObject attackTextGuiLabel = (GameObject)Instantiate(attackTextLabel, attackTextLabelPosition, transform.rotation);
 			attackTextGuiLabel.SetActive(true);
 			tagAttackTextLabelQueue.Enqueue(attackTextGuiLabel);
@@ -381,7 +382,7 @@ public class Board : MonoBehaviour {
 			}		
 		}
 
-		isBlockExchanging = true;
+		//isBlockExchanging = true;
 
 		GameObject selectedBlock = tagBlockDictionry [selectedBlockTag];
 
@@ -413,11 +414,11 @@ public class Board : MonoBehaviour {
 		Vector2 controlPoint2;
 
 		if (fromPositionIndex.xx != toPositionIndex.xx) {
-			controlPoint1 = new Vector2 (startPosition.x, startPosition.y - cellHeight / 2);
-			controlPoint2 = new Vector2 (endPosition.x, endPosition.y - cellHeight / 2);
+			controlPoint1 = new Vector2 (startPosition.x, startPosition.y - 2 * cellHeight / 3);
+			controlPoint2 = new Vector2 (endPosition.x, endPosition.y - 2 * cellHeight / 3);
 		} else {
-			controlPoint1 = new Vector2 (startPosition.x + cellWidth / 2, startPosition.y);
-			controlPoint2 = new Vector2 (endPosition.x + cellWidth / 2, endPosition.y);
+			controlPoint1 = new Vector2 (startPosition.x + 2 * cellWidth / 3, startPosition.y);
+			controlPoint2 = new Vector2 (endPosition.x + 2 * cellWidth / 3, endPosition.y);
 		}
 
 		Bezier bezier = null;
