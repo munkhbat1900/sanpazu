@@ -240,7 +240,7 @@ public class Board : MonoBehaviour {
 		int[] ycounter  = new int[Consts.BOARD_SIZE_X + 1];
 		
 		for (int i = 1; i <= Consts.BOARD_SIZE_X; i++) {
-			ycounter[i] = -1;
+			ycounter[i] = 0;
 		}
 
 		foreach (var pair in successBlockMap) {
@@ -281,9 +281,6 @@ public class Board : MonoBehaviour {
 		}
 		
 		nextPosY++;
-		if (nextPosY == 0) {
-			nextPosY++;		
-		}
 		
 		block.GetComponent<NextPosition> ().X = positionIndex.xx;
 		block.GetComponent<NextPosition> ().Y = nextPosY;
