@@ -14,12 +14,13 @@ public class PuzzleRule : System.Object {
 	// キー：コマのタグ、値：パズル成功番号。
 	SortedDictionary<int, int> successBlockMap;
 
-	private void checkPuzzleByAxis(MoveDirection moveDirection, int x, int y, SortedDictionary<int, GameObject> tagBlockDictionary) {
+	private void CheckPuzzleByAxis(MoveDirection moveDirection, int x, int y, 
+	                               SortedDictionary<int, GameObject> tagBlockDictionary) {
 		int tag = Consts.GetTag (x, y);
 
-		if (MoveDirection.X == moveDirection && hasChecked(MoveDirection.X, x, y)) {
+		if (MoveDirection.X == moveDirection && HasChecked(MoveDirection.X, x, y)) {
 			return;
-		} else if (MoveDirection.Y == moveDirection && hasChecked(MoveDirection.Y, x, y)) {
+		} else if (MoveDirection.Y == moveDirection && HasChecked(MoveDirection.Y, x, y)) {
 			return;		
 		}
 
@@ -113,7 +114,7 @@ public class PuzzleRule : System.Object {
 		}
 	}
 
-	private bool hasChecked(MoveDirection moveDirection, int x, int y) {
+	private bool HasChecked(MoveDirection moveDirection, int x, int y) {
 		int tag = Consts.GetTag (x, y);
 		if (moveDirection == MoveDirection.X) {
 			return tagRightCheckDictionary [tag];		
@@ -127,7 +128,7 @@ public class PuzzleRule : System.Object {
 	/// </summary>
 	/// <returns>The success block. dictionary key is successNumber. value is successful block tags</returns>
 	/// <param name="tagBlockDictionary">Tag block dictionary.</param>
-	public SortedDictionary<int, int> getSuccessBlock(SortedDictionary<int, GameObject> tagBlockDictionary) {
+	public SortedDictionary<int, int> GetSuccessBlock(SortedDictionary<int, GameObject> tagBlockDictionary) {
 		successBlockMap = new SortedDictionary<int, int> ();
 		tagRightCheckDictionary = new SortedDictionary<int, bool> ();
 		tagUpCheckDictionary = new SortedDictionary<int, bool> ();
@@ -142,8 +143,8 @@ public class PuzzleRule : System.Object {
 
 		for (int x = 1; x <= Consts.BOARD_SIZE_X; x++) {
 			for (int y = 1; y <= Consts.BOARD_SIZE_Y; y++) {
-				checkPuzzleByAxis(MoveDirection.X, x, y, tagBlockDictionary);
-				checkPuzzleByAxis(MoveDirection.Y, x, y, tagBlockDictionary);
+				CheckPuzzleByAxis(MoveDirection.X, x, y, tagBlockDictionary);
+				CheckPuzzleByAxis(MoveDirection.Y, x, y, tagBlockDictionary);
 			}		
 		}
 		return successBlockMap;

@@ -1,12 +1,14 @@
-﻿using UnityEngine;
+﻿ using UnityEngine;
 using System.Collections;
-
+/// <summary>
+/// show fps. this class is a copy from somewhere.
+/// </summary>
 public class FpsShow : MonoBehaviour {
 	public float mUpdateInterval = 1.0f;  	// 更新される頻度
-	int mNumFrame = 0;						// フレーム数
-	float mTimeCounter = 0.0f;				// 計測用カウンター
-	float mTimer = 0.0f;					// タイマー
-	float mFps = 0.0f;
+	private int mNumFrame = 0;						// フレーム数
+	private float mTimeCounter = 0.0f;				// 計測用カウンター
+	private float mTimer = 0.0f;					// タイマー
+	private float mFps = 0.0f;
 
 	// Use this for initialization
 	void Start () {

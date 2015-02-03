@@ -6,13 +6,12 @@ public class BezierAnimation : MonoBehaviour
 	public Bezier myBezier;
 	private float t = 0f;
 	public bool isAnimate = false;
-	// use when stop animation.
+	// use when stop animation while animating.
 	public bool isStopAnimation = false;
 	
 	void Start()
 	{
 		t = 0f;
-		//myBezier = new Bezier( new Vector3( -1f, 1f, -1f ), Random.insideUnitSphere * 2f, Random.insideUnitSphere * 2f, new Vector3( 3f, 1f, 3f ) );
 	}
 	
 	void Update()

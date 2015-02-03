@@ -10,13 +10,13 @@ public class NextPosition : MonoBehaviour {
 		yval = int.MaxValue;
 	}
 		
-		public int X {
-				get { return xval;}
-				set { xval = value;}
-		}
+	public int X {
+		get { return xval;}
+		set { xval = value;}
+	}
 		
-		public int Y {
-			get { return yval;}
-			set { yval = value;}
-		}
+	public int Y {
+		get { return yval;}
+		set { yval = value;}
+	}
 }
